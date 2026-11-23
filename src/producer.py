@@ -1,15 +1,10 @@
 import json
 import math
-import os
-from pathlib import Path
 
 import pandas as pd
 from confluent_kafka import Producer, KafkaException
 
-# kafka settings from .env (defaults for local run)
-BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-TOPIC = os.getenv("KAFKA_TOPIC", "earthquakes")
-RAW_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "raw_data.csv"
+from src import config
 
 
 # dict to json string, NaN to null
@@ -19,16 +14,14 @@ def to_json(record):
 
 
 def send_records(records):
-    producer = Producer({"bootstrap.servers": BOOTSTRAP_SERVERS})
+    producer = Producer({"bootstrap.servers": config.KAFKA_BOOTSTRAP_SERVERS})
     stats = {"total": len(records), "published": 0, "failed": 0}
 
     # check that broker is running
     try:
         producer.list_topics(timeout=5)
     except KafkaException as e:
-        print(f"Kafka is not available at {BOOTSTRAP_SERVERS}: {e}")
-        stats["failed"] = len(records)
-        return stats
+        raise RuntimeError(f"Kafka is not available at {config.KAFKA_BOOTSTRAP_SERVERS}: {e}")
 
     # delivery report for each message
     def on_delivery(err, msg):
@@ -46,10 +39,11 @@ def send_records(records):
             print(f"JSON error: {e}")
             continue
 
-        # send if queue is full wait and retry
+        # send, if queue is full wait and retry
         while True:
             try:
-                producer.produce(TOPIC, key=str(record.get("id")), value=value, on_delivery=on_delivery)
+                producer.produce(config.KAFKA_TOPIC, key=str(record.get("event_id")),
+                                 value=value, on_delivery=on_delivery)
                 break
             except BufferError:
                 producer.poll(1)
@@ -58,23 +52,26 @@ def send_records(records):
     # wait until all messages are delivered
     stats["failed"] += producer.flush(30)
     print(f"Records: {stats['total']}, published: {stats['published']}, failed: {stats['failed']}")
-    return stats
+    return stats["published"]
 
 
-# place for raw data from api_client
+# raw data from api_client, test records if file not ready
 def load_records():
-    if RAW_DATA_PATH.exists():
-        return pd.read_csv(RAW_DATA_PATH).to_dict(orient="records")
+    if config.RAW_CSV_PATH.exists():
+        return pd.read_csv(config.RAW_CSV_PATH).to_dict(orient="records")
     print("raw_data.csv not found, using test records")
     return [
-        {"id": "test1", "mag": 4.5, "depth": 10.0, "place": "Test A", "time": 1763856000000,
-         "type": "earthquake", "alert": None, "tsunami": 0},
-        {"id": "test2", "mag": 2.1, "depth": 5.3, "place": "Test B", "time": 1763859600000,
-         "type": "earthquake", "alert": "green", "tsunami": 0},
-        {"id": "test3", "mag": 6.0, "depth": 35.0, "place": "Test C", "time": 1763863200000,
-         "type": "earthquake", "alert": None, "tsunami": 1},
+        {"event_id": "test1", "magnitude": 4.5, "depth_km": 10.0, "place": "Test A",
+         "time_ms": 1763856000000, "event_type": "earthquake", "alert": None, "tsunami": 0},
+        {"event_id": "test2", "magnitude": 2.1, "depth_km": 5.3, "place": "Test B",
+         "time_ms": 1763859600000, "event_type": "earthquake", "alert": "green", "tsunami": 0},
+        {"event_id": "test3", "magnitude": 6.0, "depth_km": 35.0, "place": "Test C",
+         "time_ms": 1763863200000, "event_type": "earthquake", "alert": None, "tsunami": 1},
     ]
 
 
 if __name__ == "__main__":
-    send_records(load_records())
+    try:
+        send_records(load_records())
+    except RuntimeError as e:
+        print(e)
