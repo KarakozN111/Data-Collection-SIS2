@@ -73,13 +73,10 @@ docker ps                          # the kafka container must be "Up"
 
 Create the topic:
 ```bash
-docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists \
-  --topic earthquakes --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic earthquakes --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 docker exec kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092
 ```
 
-<!-- TODO (Member 2): check the container name and the kafka-topics.sh path against docker-compose.yml -->
 
 Stop Kafka after work:
 ```bash
@@ -112,9 +109,9 @@ python -m src.loader              # 6. load into data/output.db
 python -m src.analysis            # 7. EDA and figures
 ```
 
-<!-- TODO (Members 2-4): check that each module can be started on its own with these commands -->
+<!-- TODO (Members 3-4): check that each module can be started on its own with these commands -->
 
-The Producer and the Consumer can also be run in two terminals: start the Consumer first, then the Producer in the second terminal.
+Run the Producer before the Consumer. When the Consumer is started on its own, it stops after 10 seconds without new messages.
 
 ## Expected outputs
 
@@ -188,3 +185,5 @@ seismic-pipeline/
 | Kafka connection error | Check that Docker is running and `docker ps` shows the kafka container |
 | `API returned 0 records` | Increase the date range or decrease `--min-magnitude` |
 | `HTTP 400` from the API | Check the date format, it must be `YYYY-MM-DD` |
+| Consumer prints `Consumed: 0` | The consumer group has already read all messages. Run the Producer again or recreate Kafka with `docker compose down` and `docker compose up -d` |
+| Topic `earthquakes` not found | `docker compose down` deletes the topic. Create it again with the command from "Kafka setup" |
