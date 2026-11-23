@@ -1,85 +1,144 @@
-import os
-import time
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+"""Collect earthquake records from the USGS Earthquake Catalog API.
 
-import pandas as pd
+Endpoint: https://earthquake.usgs.gov/fdsnws/event/1/query
+Docs:     https://earthquake.usgs.gov/fdsnws/event/1/
+
+The original API response is saved unchanged to data/raw_response.json,
+and the flattened records are saved to data/raw_data.csv before any cleaning.
+"""
+import csv
+import json
+import logging
+import time
+
 import requests
 
-# api settings from .env (defaults for local run)
-API_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query"
-DAYS_BACK = int(os.getenv("USGS_DAYS_BACK", "30"))
-MIN_MAGNITUDE = float(os.getenv("USGS_MIN_MAGNITUDE", "2.5"))
-RAW_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "raw_data.csv"
+from src import config
+
+logger = logging.getLogger(__name__)
+
+RECORD_FIELDS = [
+    "event_id", "magnitude", "mag_type", "place", "time_ms", "updated_ms",
+    "latitude", "longitude", "depth_km", "event_type", "status", "tsunami",
+    "significance", "alert", "network", "felt", "cdi", "mmi",
+    "gap", "rms", "nst", "dmin", "title", "url",
+]
 
 
-# send request and retry up to 3 times on errors
-def fetch_data(params, retries=3):
-    for attempt in range(1, retries + 1):
-        try:
-            response = requests.get(API_URL, params=params, timeout=30)
-            if response.status_code == 200:
-                return response.json()
-            print(f"Attempt {attempt}: status code {response.status_code}")
-        except requests.RequestException as e:
-            print(f"Attempt {attempt}: request error: {e}")
-        time.sleep(2)
-    return None
+class ApiError(Exception):
+    """Raised when the API data cannot be collected."""
 
 
-# geojson feature to flat dict
-def parse_feature(feature):
-    props = feature["properties"]
-    lon, lat, depth = feature["geometry"]["coordinates"]
+def build_params(start_time, end_time, min_magnitude, limit):
+    """Query parameters for the USGS API."""
     return {
-        "id": feature["id"],
-        "mag": props.get("mag"),
+        "format": "geojson",
+        "starttime": start_time,
+        "endtime": end_time,
+        "minmagnitude": min_magnitude,
+        "orderby": "time-asc",
+        "limit": limit,
+    }
+
+
+def request_data(params):
+    """Send the GET request and return the parsed JSON response.
+
+    Retries on timeouts, connection errors and server errors (5xx, 429).
+    Client errors (4xx) mean wrong parameters, so they are not retried.
+    """
+    for attempt in range(1, config.API_MAX_RETRIES + 1):
+        try:
+            response = requests.get(config.API_URL, params=params, timeout=config.API_TIMEOUT)
+        except (requests.Timeout, requests.ConnectionError) as error:
+            logger.warning("Attempt %d/%d failed: %s", attempt, config.API_MAX_RETRIES, error)
+        else:
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except ValueError as error:
+                    raise ApiError("API returned invalid JSON") from error
+            if response.status_code == 429 or response.status_code >= 500:
+                logger.warning("Attempt %d/%d: HTTP %d", attempt, config.API_MAX_RETRIES, response.status_code)
+            else:
+                raise ApiError(f"HTTP {response.status_code}: {response.text[:200]}")
+
+        if attempt < config.API_MAX_RETRIES:
+            time.sleep(2 ** attempt)
+
+    raise ApiError(f"No successful response after {config.API_MAX_RETRIES} attempts")
+
+
+def parse_feature(feature):
+    """Convert one GeoJSON feature into a flat record. Values are kept as received."""
+    props = feature.get("properties") or {}
+    coordinates = (feature.get("geometry") or {}).get("coordinates") or []
+    longitude, latitude, depth = (list(coordinates) + [None, None, None])[:3]
+
+    return {
+        "event_id": feature.get("id"),
+        "magnitude": props.get("mag"),
         "mag_type": props.get("magType"),
         "place": props.get("place"),
-        "time": props.get("time"),
-        "updated": props.get("updated"),
-        "type": props.get("type"),
+        "time_ms": props.get("time"),
+        "updated_ms": props.get("updated"),
+        "latitude": latitude,
+        "longitude": longitude,
+        "depth_km": depth,
+        "event_type": props.get("type"),
         "status": props.get("status"),
-        "alert": props.get("alert"),
         "tsunami": props.get("tsunami"),
-        "sig": props.get("sig"),
-        "net": props.get("net"),
-        "latitude": lat,
-        "longitude": lon,
-        "depth": depth,
+        "significance": props.get("sig"),
+        "alert": props.get("alert"),
+        "network": props.get("net"),
+        "felt": props.get("felt"),
+        "cdi": props.get("cdi"),
+        "mmi": props.get("mmi"),
+        "gap": props.get("gap"),
+        "rms": props.get("rms"),
+        "nst": props.get("nst"),
+        "dmin": props.get("dmin"),
+        "title": props.get("title"),
+        "url": props.get("url"),
     }
 
 
-def collect_records():
-    end = datetime.now(timezone.utc)
-    start = end - timedelta(days=DAYS_BACK)
-    params = {
-        "format": "geojson",
-        "starttime": start.strftime("%Y-%m-%d"),
-        "endtime": end.strftime("%Y-%m-%d"),
-        "minmagnitude": MIN_MAGNITUDE,
-        "orderby": "time",
-    }
-    print(f"Request: {API_URL} {params}")
+def save_raw_json(data, path=config.RAW_JSON_PATH):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
 
-    data = fetch_data(params)
-    if data is None or "features" not in data:
-        print("Could not get data from USGS API")
-        return []
 
-    records = []
-    for feature in data["features"]:
-        try:
-            records.append(parse_feature(feature))
-        except (KeyError, TypeError, ValueError) as e:
-            print(f"Skipped bad feature: {e}")
+def save_raw_csv(records, path=config.RAW_CSV_PATH):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=RECORD_FIELDS)
+        writer.writeheader()
+        writer.writerows(records)
 
-    # save original data before cleaning
-    RAW_DATA_PATH.parent.mkdir(exist_ok=True)
-    pd.DataFrame(records).to_csv(RAW_DATA_PATH, index=False)
-    print(f"Collected: {len(records)} records, saved to {RAW_DATA_PATH}")
+
+def collect(start_time=config.API_START_TIME, end_time=config.API_END_TIME,
+            min_magnitude=config.API_MIN_MAGNITUDE, limit=config.API_LIMIT):
+    """Collect earthquake records, save the raw data and return the records."""
+    params = build_params(start_time, end_time, min_magnitude, limit)
+    logger.info("Requesting %s with %s", config.API_URL, params)
+
+    data = request_data(params)
+    features = data.get("features")
+    if not isinstance(features, list):
+        raise ApiError("Response has no 'features' list")
+    if not features:
+        raise ApiError("API returned 0 records, change the date range or magnitude")
+
+    records = [parse_feature(feature) for feature in features]
+
+    save_raw_json(data)
+    save_raw_csv(records)
+    logger.info("Collected %d records, saved to %s", len(records), config.RAW_CSV_PATH)
     return records
 
 
 if __name__ == "__main__":
-    collect_records()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    collected = collect()
+    print(f"Collected records: {len(collected)}")
