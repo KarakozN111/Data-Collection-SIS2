@@ -1,7 +1,5 @@
 # Analysis of Seismic Activity Based on Earthquake Data
 
-SIS2 project for the Data Collection & Preparation course: an end-to-end data pipeline with Apache Kafka and Pandera.
-
 ## Project overview
 
 The pipeline collects real earthquake records from the USGS Earthquake Catalog API, streams them through Apache Kafka, validates them with Pandera, cleans and transforms them with pandas and NumPy, stores them in SQLite3 and analyzes them with Matplotlib and Seaborn.
