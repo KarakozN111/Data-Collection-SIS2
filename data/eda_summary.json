@@ -1,0 +1,192 @@
+{
+  "rows": 2606,
+  "columns": 28,
+  "period": [
+    "2026-10-01 00:01:59",
+    "2026-10-31 23:57:55"
+  ],
+  "magnitude": {
+    "count": 2606.0,
+    "mean": 3.95,
+    "std": 0.9,
+    "min": 2.5,
+    "25%": 3.0,
+    "50%": 4.3,
+    "75%": 4.6,
+    "max": 7.7,
+    "skew": -0.21
+  },
+  "depth_km": {
+    "count": 2606.0,
+    "mean": 57.46,
+    "std": 109.11,
+    "min": -3.19,
+    "25%": 10.0,
+    "50%": 10.0,
+    "75%": 55.02,
+    "max": 651.23,
+    "skew": 3.56
+  },
+  "corr_magnitude_depth": 0.1,
+  "corr_magnitude_significance": 0.96,
+  "by_magnitude_class": [
+    {
+      "magnitude_class": "2.5-3.9",
+      "events": 934,
+      "avg_depth_km": 32.7,
+      "tsunami_flags": 0,
+      "share_percent": 35.8
+    },
+    {
+      "magnitude_class": "4.0-4.9",
+      "events": 1448,
+      "avg_depth_km": 75.8,
+      "tsunami_flags": 0,
+      "share_percent": 55.6
+    },
+    {
+      "magnitude_class": "5.0-5.9",
+      "events": 202,
+      "avg_depth_km": 37.2,
+      "tsunami_flags": 1,
+      "share_percent": 7.8
+    },
+    {
+      "magnitude_class": "6.0-6.9",
+      "events": 20,
+      "avg_depth_km": 93.0,
+      "tsunami_flags": 5,
+      "share_percent": 0.8
+    },
+    {
+      "magnitude_class": "7.0+",
+      "events": 2,
+      "avg_depth_km": 14.0,
+      "tsunami_flags": 0,
+      "share_percent": 0.1
+    }
+  ],
+  "by_depth_class": [
+    {
+      "depth_class": "shallow (<70 km)",
+      "events": 2058,
+      "avg_magnitude": 3.93,
+      "median_magnitude": 4.3,
+      "max_magnitude": 7.7
+    },
+    {
+      "depth_class": "intermediate (70-300 km)",
+      "events": 439,
+      "avg_magnitude": 3.94,
+      "median_magnitude": 4.2,
+      "max_magnitude": 6.9
+    },
+    {
+      "depth_class": "deep (300+ km)",
+      "events": 109,
+      "avg_magnitude": 4.43,
+      "median_magnitude": 4.3,
+      "max_magnitude": 6.5
+    }
+  ],
+  "top_regions": [
+    {
+      "region": "Alaska",
+      "events": 651,
+      "avg_magnitude": 2.91,
+      "max_magnitude": 5.6,
+      "avg_depth_km": 40.91
+    },
+    {
+      "region": "Vanuatu",
+      "events": 291,
+      "avg_magnitude": 4.68,
+      "max_magnitude": 6.8,
+      "avg_depth_km": 16.86
+    },
+    {
+      "region": "Panama",
+      "events": 161,
+      "avg_magnitude": 4.67,
+      "max_magnitude": 7.7,
+      "avg_depth_km": 10.06
+    },
+    {
+      "region": "Indonesia",
+      "events": 142,
+      "avg_magnitude": 4.51,
+      "max_magnitude": 5.7,
+      "avg_depth_km": 48.55
+    },
+    {
+      "region": "Russia",
+      "events": 99,
+      "avg_magnitude": 4.56,
+      "max_magnitude": 6.9,
+      "avg_depth_km": 41.61
+    },
+    {
+      "region": "Japan",
+      "events": 98,
+      "avg_magnitude": 4.54,
+      "max_magnitude": 6.5,
+      "avg_depth_km": 115.97
+    },
+    {
+      "region": "China",
+      "events": 65,
+      "avg_magnitude": 4.6,
+      "max_magnitude": 7.0,
+      "avg_depth_km": 10.08
+    },
+    {
+      "region": "Papua New Guinea",
+      "events": 62,
+      "avg_magnitude": 4.62,
+      "max_magnitude": 6.2,
+      "avg_depth_km": 67.8
+    },
+    {
+      "region": "Philippines",
+      "events": 59,
+      "avg_magnitude": 4.58,
+      "max_magnitude": 5.8,
+      "avg_depth_km": 65.19
+    },
+    {
+      "region": "California",
+      "events": 59,
+      "avg_magnitude": 2.84,
+      "max_magnitude": 4.01,
+      "avg_depth_km": 8.94
+    }
+  ],
+  "regions_total": 125,
+  "events_per_day": {
+    "mean": 84.1,
+    "min": 58,
+    "max": 158,
+    "max_day": "2026-10-24"
+  },
+  "strongest_event": {
+    "magnitude": 7.7,
+    "place": "10 km WSW of Pitaloza Arriba, Panama",
+    "time": "2026-10-09 17:56:05",
+    "depth_km": 10.0
+  },
+  "tsunami_flags": 6,
+  "alerts": {
+    "none": 2525,
+    "green": 74,
+    "yellow": 5,
+    "orange": 2
+  },
+  "figures": [
+    "figures/01_magnitude_distribution.png",
+    "figures/02_epicenter_map.png",
+    "figures/03_depth_vs_magnitude.png",
+    "figures/04_top_regions.png",
+    "figures/05_region_depth_heatmap.png",
+    "figures/06_daily_activity.png"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "collected_from_api": 2606,
+  "published_to_kafka": 2606,
+  "consumed_from_kafka": 2606,
+  "valid_records": 2606,
+  "invalid_records": 4,
+  "after_cleaning": 2606,
+  "stored_first_load": 2606,
+  "stored_second_load": 2606
+}
