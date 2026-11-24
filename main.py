@@ -1,3 +1,14 @@
+"""Run the complete pipeline:
+
+USGS API -> Kafka Producer -> Kafka Topic -> Kafka Consumer -> Pandera validation
+-> cleaning and transformation -> SQLite3 -> EDA and figures
+
+Before running, start Kafka (docker compose up -d) and create the topic (see README.md).
+
+Usage:
+    python main.py
+    python main.py --start 2026-09-01 --end 2026-10-01 --min-magnitude 3
+"""
 import argparse
 import importlib
 import json
@@ -17,7 +28,6 @@ def load_module(name):
         return importlib.import_module(f"src.{name}")
     except ModuleNotFoundError as error:
         logger.error("Module src/%s.py cannot be loaded: %s", name, error)
-        logger.error("For development without this module use: python main.py --skip-kafka")
         sys.exit(1)
 
 
@@ -36,8 +46,7 @@ def parse_args():
     parser.add_argument("--start", default=config.API_START_TIME, help="start date, YYYY-MM-DD")
     parser.add_argument("--end", default=config.API_END_TIME, help="end date, YYYY-MM-DD")
     parser.add_argument("--min-magnitude", type=float, default=config.API_MIN_MAGNITUDE)
-    parser.add_argument("--skip-kafka", action="store_true",
-                        help="pass records directly to validation (development only)")
+
     return parser.parse_args()
 
 
@@ -51,16 +60,11 @@ def main():
                         args.start, args.end, args.min_magnitude)
     summary["collected_from_api"] = len(records)
 
-    # 2. Kafka streaming
-    if args.skip_kafka:
-        logger.warning("Kafka stage skipped (--skip-kafka)")
-        consumed = records
-        summary["published_to_kafka"] = "skipped"
-    else:
-        producer = load_module("producer")
-        consumer = load_module("consumer")
-        summary["published_to_kafka"] = run_stage("2. Kafka Producer", producer.send_records, records)
-        consumed = run_stage("3. Kafka Consumer", consumer.consume_records, len(records))
+    # 2. Kafka streaming: records go through the real Kafka topic
+    producer = load_module("producer")
+    consumer = load_module("consumer")
+    summary["published_to_kafka"] = run_stage("2. Kafka Producer", producer.send_records, records)
+    consumed = run_stage("3. Kafka Consumer", consumer.consume_records, len(records))
     summary["consumed_from_kafka"] = len(consumed)
 
     # 3. Validation
