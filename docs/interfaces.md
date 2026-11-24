@@ -57,6 +57,20 @@ Each record collected from the API (one Kafka message) is a dictionary with thes
 | `title` | str | `M 4.6 - 45 km SW of Ovalle, Chile` | Event title |
 | `url` | str | `https://earthquake.usgs.gov/...` | Event page |
 
+## Columns expected by loader.py
+
+`loader.py` stores these columns in the table `earthquakes` (see `COLUMNS` in `src/loader.py`):
+all record keys above except `time_ms` / `updated_ms`, plus
+
+| Column | Type in `clean_df` | Meaning |
+|---|---|---|
+| `event_time` | datetime (UTC) | Event time, made from `time_ms` |
+| `updated_time` | datetime (UTC) | Last update, made from `updated_ms` |
+| `region` | str | Last part of `place` after the comma, e.g. `Alaska` |
+
+If `cleaner.py` does not create them, the loader builds them from `time_ms`, `updated_ms` and `place`.
+Other extra columns of `clean_df` are not stored.
+
 ## Development without Kafka
 
 Until the Kafka part is ready, run the pipeline without it:

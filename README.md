@@ -121,7 +121,8 @@ Run the Producer before the Consumer. When the Consumer is started on its own, i
 | `data/raw_data.csv` | `api_client.py` | Collected records before cleaning |
 | `data/output.db` | `loader.py` | SQLite3 database with cleaned records |
 | `data/pipeline_summary.json` | `main.py` | Record counts for every stage |
-| `figures/*.png` | `analysis.py` | Visualizations |
+| `figures/*.png` | `analysis.py` | Six visualizations (magnitude, map, depth, regions, heatmap, daily activity) |
+| `data/eda_summary.json` | `analysis.py` | Key numbers of the analysis used in the report |
 
 At the end `main.py` prints a summary:
 ```
@@ -146,6 +147,11 @@ Idempotency check: OK, no duplicates after repeated loading
    ```bash
    sqlite3 data/output.db < sql/verification_queries.sql
    ```
+   Without the sqlite3 tool (e.g. on Windows) the same queries run from Python:
+   ```bash
+   python -m src.loader --verify
+   ```
+   `python -m src.loader` (without `--verify`) loads the data twice and compares row counts and table checksums.
 5. The `figures/` folder contains the generated plots.
 
 ## Project structure
