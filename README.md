@@ -17,10 +17,10 @@ USGS API -> api_client.py -> data/raw_data.csv (original data)
 
 | Member | Responsibility |
 |---|---|
-| Member 1 | API data collection, `main.py`, configuration, README, report assembly |
-| Member 2 | Kafka Broker, Topic, Producer and Consumer |
-| Member 3 | Pandera validation, data cleaning and transformation, data dictionary |
-| Member 4 | SQLite3 storage and idempotency, EDA and visualizations |
+| Nurgaliyeva Karakoz | API data collection, `main.py`, configuration, README, report assembly |
+| Manat Aigerim | Kafka Broker, Topic, Producer and Consumer |
+| Raimbek Ayaulym | Pandera validation, data cleaning and transformation, data dictionary |
+| Erniyazova Zhuldyz | SQLite3 storage and idempotency, EDA and visualizations |
 
 ## Data source
 
@@ -42,6 +42,8 @@ Example request:
 https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2026-10-01&endtime=2026-11-01&minmagnitude=2.5&orderby=time-asc
 ```
 
+The last run returned 2605 records. USGS keeps reviewing old events, so a repeated request for the same period can return a slightly different number of records.
+
 Each record has numerical fields (magnitude, depth, coordinates, significance), categorical fields (event type, magnitude type, status, alert level, network) and date/time fields (event time, update time). The full list of fields is in `docs/interfaces.md` and `docs/data_dictionary.md`.
 
 ## Requirements
@@ -53,8 +55,8 @@ Each record has numerical fields (magnitude, depth, coordinates, significance), 
 ## Installation
 
 ```bash
-git clone <repository-url>
-cd seismic-pipeline
+git clone https://github.com/KarakozN111/Data-Collection-SIS2.git
+cd Data-Collection-SIS2
 
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
@@ -76,7 +78,6 @@ Create the topic:
 docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic earthquakes --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 docker exec kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092
 ```
-
 
 Stop Kafka after work:
 ```bash
@@ -109,9 +110,7 @@ python -m src.loader              # 6. load into data/output.db
 python -m src.analysis            # 7. EDA and figures
 ```
 
-<!-- TODO (Members 3-4): check that each module can be started on its own with these commands -->
-
-Run the Producer before the Consumer. When the Consumer is started on its own, it stops after 10 seconds without new messages.
+`validator`, `cleaner` and `loader` started on their own read `data/raw_data.csv`, and `analysis` reads `data/output.db`, so they work without Kafka. Run the Producer before the Consumer. When the Consumer is started on its own, it stops after 10 seconds without new messages.
 
 ## Expected outputs
 
@@ -157,7 +156,7 @@ Idempotency check: OK, no duplicates after repeated loading
 ## Project structure
 
 ```
-seismic-pipeline/
+Data-Collection-SIS2/
 ├── README.md
 ├── requirements.txt
 ├── docker-compose.yml
@@ -187,7 +186,7 @@ seismic-pipeline/
 
 | Problem | Solution |
 |---|---|
-| `Module src/producer.py is missing` | This part is not added yet. Use `python main.py --skip-kafka` for development |
+| `Module src/... cannot be loaded` | Run the command from the project root and install the libraries: `pip install -r requirements.txt` |
 | Kafka connection error | Check that Docker is running and `docker ps` shows the kafka container |
 | `API returned 0 records` | Increase the date range or decrease `--min-magnitude` |
 | `HTTP 400` from the API | Check the date format, it must be `YYYY-MM-DD` |
