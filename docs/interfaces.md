@@ -71,15 +71,11 @@ all record keys above except `time_ms` / `updated_ms`, plus
 If `cleaner.py` does not create them, the loader builds them from `time_ms`, `updated_ms` and `place`.
 Other extra columns of `clean_df` are not stored.
 
-## Development without Kafka
 
-Until the Kafka part is ready, run the pipeline without it:
+## Running one stage on its own
 
-```
-python main.py --skip-kafka
-```
-
-Members 3 and 4 can also start from `data/raw_data.csv` directly:
+Every module can also be started separately from the project root, for example `python -m src.validator`.
+Stages after Kafka read `data/raw_data.csv` when they are started on their own:
 
 ```python
 import pandas as pd
